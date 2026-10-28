@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Explorá Villa Huidobro</title>
+<style>
+:root{--ink:#17324d;--paper:#fffdf6;--blue:#3b82f6;--pink:#fb7185;--yellow:#facc15;--green:#34d399}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,Segoe UI,sans-serif;color:var(--ink);background:linear-gradient(135deg,#dbeafe,#fce7f3 55%,#fef3c7);min-height:100vh}
+header{padding:34px 18px 26px;text-align:center;background:#ffffffb8;border-bottom:3px solid #fff}
+h1{font-size:clamp(2rem,6vw,4rem);line-height:1;margin:8px 0}header p{max-width:680px;margin:14px auto;font-size:1.08rem}
+main{max-width:900px;margin:24px auto;padding:0 14px 50px}.card{background:var(--paper);border:3px solid white;border-radius:24px;padding:clamp(18px,4vw,32px);box-shadow:0 12px 30px #17324d18;margin:18px 0}
+.pill{display:inline-block;background:#dbeafe;border-radius:99px;padding:7px 12px;font-weight:800;font-size:.85rem}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+input{width:100%;padding:14px;border:2px solid #cbd5e1;border-radius:13px;font-size:1rem;margin:8px 0 14px}
+button{border:0;border-radius:14px;padding:13px 18px;font-size:1rem;font-weight:800;cursor:pointer;background:var(--blue);color:white;box-shadow:0 4px 0 #1d4ed8;transition:transform .12s}button:hover{transform:translateY(-2px)}button.secondary{background:#f9a8d4;color:#831843;box-shadow:0 4px 0 #ec4899}button.gold{background:var(--yellow);color:#713f12;box-shadow:0 4px 0 #ca8a04}
+.option{display:block;width:100%;text-align:left;background:white;color:var(--ink);box-shadow:none;border:2px solid #dbeafe;margin:9px 0;padding:14px}.option:hover{border-color:var(--blue)}.option.chosen{background:#dbeafe;border-color:var(--blue)}
+.progress{height:12px;background:#e2e8f0;border-radius:99px;overflow:hidden;margin:14px 0}.progress span{display:block;height:100%;width:0;background:linear-gradient(90deg,#60a5fa,#f472b6);transition:width .2s}
+h2{margin-top:0} .hidden{display:none!important}.big{font-size:2.5rem;font-weight:900}.small{font-size:.9rem;color:#475569}.topic{background:#fef3c7;border-radius:16px;padding:14px;margin:8px 0}.result{border-bottom:1px solid #e2e8f0;padding:12px 0}.correct{color:#047857;font-weight:800}.wrong{color:#be123c;font-weight:800}footer{text-align:center;padding:24px;color:#334155}
+</style></head>
+<body>
+<header><div class="pill">🧭 GUÍA COMUNITARIA INTERACTIVA</div><h1>¡Explorá Villa Huidobro!</h1><p>Descubrí lugares, servicios y formas de participar en tu comunidad. Jugá, aprendé y convertite en explorador/a local. 🌟</p><div class="row" style="justify-content:center"><span>🎮 Mini desafío</span><span>🏘️ Tu localidad</span><span>💡 Aprender jugando</span></div></header>
+<main>
+<section class="card" id="home"><h2>🚀 ¿Listo para el desafío?</h2><p>En cada ronda vas a recibir <b>3 preguntas al azar</b> de un banco de 100. Cada ronda cambia. Al final vas a ver tu puntaje y las respuestas correctas.</p><label for="player"><b>¿Cómo te llamás o qué apodo querés usar?</b></label><input id="player" maxlength="40" placeholder="Escribí tu nombre o apodo"><div class="row"><button onclick="startQuiz()">¡Empezar a jugar!</button><button class="secondary" onclick="showPlaces()">Explorar temas</button><button class="gold" onclick="toggleAdmin()">🔒 Panel privado</button></div><p class="small">Consejo: si sos menor, podés usar un apodo en lugar de tu nombre completo.</p></section>
+<section class="card hidden" id="places"><h2>🗺️ ¿Qué podés descubrir?</h2><div class="topic">🏛️ <b>Municipalidad</b> — servicios y necesidades de la comunidad.</div><div class="topic">🗳️ <b>Concejo Deliberante</b> — ordenanzas y decisiones locales.</div><div class="topic">🏫 <b>Escuelas</b> — aprender y participar.</div><div class="topic">🩺 <b>Salud y emergencias</b> — dónde buscar ayuda.</div><div class="topic">🌱 <b>Ambiente</b> — cuidar los espacios comunes.</div><button onclick="backHome()">Volver</button></section>
+<section class="card hidden" id="quiz"><div class="row" style="justify-content:space-between"><span class="pill" id="qnumber">Pregunta 1 de 3</span><span class="pill" id="scorepill">⭐ 0 puntos</span></div><div class="progress"><span id="bar"></span></div><h2 id="question"></h2><div id="options"></div><p id="feedback" aria-live="polite"></p><button id="next" onclick="nextQuestion()" disabled>Siguiente →</button></section>
+<section class="card hidden" id="done"><div class="pill">🏁 RONDA COMPLETADA</div><h2 id="greeting">¡Buen trabajo!</h2><div class="big" id="finalscore">0/3</div><p id="finalmessage"></p><h3>📋 Tus respuestas</h3><div id="review"></div><div class="row"><button onclick="startQuiz()">🔀 Otra ronda aleatoria</button><button class="secondary" onclick="backHome()">Volver al inicio</button></div></section>
+<section class="card hidden" id="admin"><h2>🔐 Panel privado</h2><p>Este panel se conecta a Supabase cuando configures las claves y crees tu usuario administrador. Sin esa configuración, no puede mostrar resultados de otros dispositivos.</p><label>Correo administrador</label><input id="adminEmail" type="email" placeholder="Tu correo de administrador"><label>Contraseña</label><input id="adminPass" type="password" placeholder="Contraseña de Supabase"><div class="row"><button onclick="adminLogin()">Iniciar sesión</button><button class="secondary" onclick="toggleAdmin()">Cerrar</button></div><p id="adminMsg" class="small"></p><div id="adminResults"></div></section>
+</main><footer>Hecho para aprender sobre Villa Huidobro 💙 · Guía comunitaria juvenil</footer>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* Pegá aquí la URL y la clave PUBLICABLE/anon de tu proyecto Supabase. Nunca uses service_role en una web pública. */
+const SUPABASE_URL = "PEGAR_URL_DE_SUPABASE";
+const SUPABASE_ANON_KEY = "PEGAR_CLAVE_PUBLICA_ANON_DE_SUPABASE";
+let sb=null; try{if(window.supabase&&SUPABASE_URL.startsWith("https://")&&!SUPABASE_URL.includes("PEGAR_")&&!SUPABASE_ANON_KEY.includes("PEGAR_"))sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY)}catch(e){}
+const topics=[
+{n:"Municipalidad",f:"Atender necesidades de la población y organizar servicios locales",loc:"el municipio",kind:"institución municipal"},
+{n:"Concejo Deliberante",f:"Elaborar y aprobar ordenanzas, resoluciones y declaraciones",loc:"el Concejo Deliberante",kind:"órgano legislativo local"},
+{n:"Centro de salud u hospital",f:"Brindar atención de salud y orientar ante una urgencia",loc:"el hospital o centro de salud",kind:"servicio de salud"},
+{n:"Escuela",f:"Garantizar el acceso a la educación y acompañar aprendizajes",loc:"la escuela",kind:"institución educativa"},
+{n:"Centro de estudiantes",f:"Representar a estudiantes y llevar sus propuestas",loc:"el centro de estudiantes",kind:"espacio de participación"},
+{n:"Juzgado de Paz",f:"Intervenir en asuntos de su competencia y orientar a la comunidad",loc:"el Juzgado de Paz",kind:"institución de justicia"},
+{n:"RAAC",f:"Brindar orientación y acompañamiento en prevención y atención de adicciones",loc:"la RAAC",kind:"servicio de orientación"},
+{n:"Medios locales",f:"Informar sobre noticias y actividades de la comunidad",loc:"los medios locales",kind:"servicio de comunicación"},
+{n:"Espacios verdes",f:"Ofrecer lugares compartidos para recreación y encuentro",loc:"los espacios verdes",kind:"espacio público"},
+{n:"Participación ciudadana",f:"Permitir que vecinos expresen ideas y colaboren en decisiones",loc:"la participación ciudadana",kind:"forma de involucrarse"}
+];
+const stems=[
+t=>({q:"¿Qué institución o espacio se relaciona con: "+t.f+"?",a:t.n}),
+t=>({q:"Si necesitás informarte sobre "+t.f.toLowerCase()+", ¿qué opción elegirías?",a:t.n}),
+t=>({q:"¿Cuál de estas opciones cumple el rol de "+t.kind+" vinculado con "+t.f.toLowerCase()+"?",a:t.n}),
+t=>({q:"En la comunidad, ¿qué espacio se asocia con “"+t.f+"”?",a:t.n}),
+t=>({q:"Elegí la opción más relacionada con esta tarea: "+t.f+".",a:t.n}),
+t=>({q:"¿A dónde orientarías una consulta relacionada con "+t.f.toLowerCase()+"?",a:t.n}),
+t=>({q:"¿Cuál de estas opciones ayuda a organizar o acompañar "+t.f.toLowerCase()+"?",a:t.n}),
+t=>({q:"¿Qué nombre corresponde al espacio que se ocupa de "+t.f.toLowerCase()+"?",a:t.n}),
+t=>({q:"¿Qué institución local puede estar relacionada con esta función: "+t.f+"?",a:t.n}),
+t=>({q:"Desafío local: identificá el espacio asociado a esta descripción: "+t.f+".",a:t.n})
+];
+const bank=[];topics.forEach(t=>stems.forEach((fn,i)=>{const x=fn(t);bank.push({q:x.q,a:x.a,wrong:topics.filter(z=>z.n!==t.n).sort(()=>Math.random()-.5).slice(0,3).map(z=>z.n),tag:t.n})}));
+/* Banco de 100 preguntas generadas a partir de funciones comunitarias y diez formas de plantear el desafío. */
+let round=[],idx=0,score=0,answers=[],current=null,playerName="";
+const $=id=>document.getElementById(id);
+function hideAll(){["home","places","quiz","done","admin"].forEach(id=>$(id).classList.add("hidden"))}
+function backHome(){hideAll();$("home").classList.remove("hidden")}
+function showPlaces(){hideAll();$("places").classList.remove("hidden")}
+function toggleAdmin(){hideAll();$("admin").classList.remove("hidden")}
+function startQuiz(){playerName=$("player").value.trim()||playerName;if(!playerName){$("player").focus();alert("Escribí un nombre o apodo para empezar.");return}round=[...bank].sort(()=>Math.random()-.5).slice(0,3);idx=0;score=0;answers=[];hideAll();$("quiz").classList.remove("hidden");renderQuestion()}
+function renderQuestion(){current=round[idx];$("qnumber").textContent="Pregunta "+(idx+1)+" de 3";$("scorepill").textContent="⭐ "+score+" puntos";$("bar").style.width=(idx/3*100)+"%";$("question").textContent=current.q;$("feedback").textContent="";$("next").disabled=true;$("next").textContent=idx===2?"Ver resultado 🏁":"Siguiente →";let opts=[current.a,...current.wrong.slice(0,3)].sort(()=>Math.random()-.5);$("options").innerHTML="";opts.forEach(opt=>{let b=document.createElement("button");b.className="option";b.textContent=opt;b.onclick=()=>choose(opt,b);$("options").appendChild(b)})}
+function choose(opt,btn){if(answers[idx])return;const ok=opt===current.a;answers[idx]={q:current.q,chosen:opt,correct:current.a,ok};if(ok)score++;[...$("options").children].forEach(b=>{b.disabled=true;if(b.textContent===current.a)b.style.borderColor="#10b981";if(b===btn&&!ok)b.style.borderColor="#fb7185"});$("feedback").textContent=ok?"¡Correcto! 🎉":"Casi. La respuesta correcta es: "+current.a; $("feedback").className=ok?"correct":"wrong";$("scorepill").textContent="⭐ "+score+" puntos";$("next").disabled=false}
+function nextQuestion(){if(!answers[idx])return;idx++;if(idx<3)renderQuestion();else finish()}
+async function finish(){hideAll();$("done").classList.remove("hidden");$("bar").style.width="100%";$("greeting").textContent="¡Bien, "+playerName+"!";$("finalscore").textContent=score+"/3";$("finalmessage").textContent=score===3?"¡Perfecto! Sos un/a explorador/a de primera.":score===2?"¡Muy bien! Cada ronda te enseña algo nuevo.":"¡Gracias por jugar! Probá otra ronda y seguí descubriendo."; $("review").innerHTML="";answers.forEach((a,i)=>{let d=document.createElement("div");d.className="result";d.innerHTML="<b>"+(i+1)+". "+esc(a.q)+"</b><p class='"+(a.ok?"correct":"wrong")+"'>Tu respuesta: "+esc(a.chosen)+"</p>"+(!a.ok?"<p>Correcta: <b>"+esc(a.correct)+"</b></p>":"");$("review").appendChild(d)});if(sb){const {error}=await sb.from("quiz_attempts").insert({player_name:playerName,score:score,total:3,answers:answers});if(error)console.warn("No se pudo guardar el resultado",error)}else{let old=JSON.parse(localStorage.getItem("vh_local_results")||"[]");old.push({player_name:playerName,score,total:3,answers,created_at:new Date().toISOString()});localStorage.setItem("vh_local_results",JSON.stringify(old))}}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+async function adminLogin(){const msg=$("adminMsg");if(!sb){msg.textContent="Falta configurar Supabase en el código. Los resultados actuales solo quedan en este navegador.";return}const {data,error}=await sb.auth.signInWithPassword({email:$("adminEmail").value,password:$("adminPass").value});if(error){msg.textContent="No se pudo iniciar sesión: revisá el correo y la contraseña.";return}msg.textContent="Sesión iniciada. Cargando resultados…";const {data:rows,error:e}=await sb.from("quiz_attempts").select("*").order("created_at",{ascending:false}).limit(300);if(e){msg.textContent="Sesión iniciada, pero no se pueden leer resultados. Revisá la política de administrador.";return}msg.textContent="Resultados guardados: "+rows.length;$("adminResults").innerHTML=rows.map(r=>"<div class='result'><b>"+esc(r.player_name)+"</b> — "+r.score+"/"+r.total+"<p class='small'>"+esc(new Date(r.created_at).toLocaleString("es-AR"))+"</p><pre style='white-space:pre-wrap'>"+esc(JSON.stringify(r.answers,null,2))+"</pre></div>").join("")}
+</script></body></html>
