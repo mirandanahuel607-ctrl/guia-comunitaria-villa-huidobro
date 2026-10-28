@@ -69,17 +69,41 @@ t=>({q:"¿Qué nombre corresponde al espacio que se ocupa de "+t.f.toLowerCase()
 t=>({q:"¿Qué institución local puede estar relacionada con esta función: "+t.f+"?",a:t.n}),
 t=>({q:"Desafío local: identificá el espacio asociado a esta descripción: "+t.f+".",a:t.n})
 ];
-const bank=[];topics.forEach(t=>stems.forEach((fn,i)=>{const x=fn(t);bank.push({q:x.q,a:x.a,wrong:topics.filter(z=>z.n!==t.n).sort(()=>Math.random()-.5).slice(0,3).map(z=>z.n),tag:t.n})}));
-/* Banco de 100 preguntas generadas a partir de funciones comunitarias y diez formas de plantear el desafío. */
+const bank=[];topics.forEach((t,topicIndex)=>stems.forEach((fn,stemIndex)=>{const x=fn(t);bank.push({id:topicIndex*stems.length+stemIndex,q:x.q,a:x.a,tag:t.n,topicIndex,stemIndex})}));
+/* Banco de 100 preguntas identificadas de forma estable para recorrerlas sin repetirlas antes de completar el ciclo. */
 let round=[],idx=0,score=0,answers=[],current=null,playerName="";
+const QUESTION_QUEUE_KEY="vh_question_queue_v2";
+const RECENT_QUESTIONS_KEY="vh_recent_questions_v2";
+function shuffle(list){const a=[...list];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function loadQuestionQueue(){try{const saved=JSON.parse(localStorage.getItem(QUESTION_QUEUE_KEY)||"null");if(Array.isArray(saved)&&saved.every(id=>Number.isInteger(id)&&bank.some(q=>q.id===id)))return saved}catch(e){}return shuffle(bank.map(q=>q.id))}
+function loadRecentQuestions(){try{const saved=JSON.parse(localStorage.getItem(RECENT_QUESTIONS_KEY)||"[]");return Array.isArray(saved)?saved.filter(Number.isInteger):[]}catch(e){return []}}
+function saveQuestionQueue(queue){localStorage.setItem(QUESTION_QUEUE_KEY,JSON.stringify(queue))}
+function chooseNextRound(){
+ let queue=loadQuestionQueue();
+ const recent=loadRecentQuestions();
+ if(queue.length<3){
+   const queued=new Set(queue);
+   const avoidRecent=new Set(recent);
+   queue.push(...shuffle(bank.map(q=>q.id).filter(id=>!queued.has(id)&&!avoidRecent.has(id))));
+ }
+ // If the queue was almost empty, add any remaining questions only after avoiding duplicates.
+ if(queue.length<3){
+   const queued=new Set(queue);
+   queue.push(...shuffle(bank.map(q=>q.id).filter(id=>!queued.has(id))));
+ }
+ const ids=queue.splice(0,3);
+ saveQuestionQueue(queue);
+ localStorage.setItem(RECENT_QUESTIONS_KEY,JSON.stringify(ids));
+ return ids.map(id=>bank.find(q=>q.id===id)).filter(Boolean);
+}
 const $=id=>document.getElementById(id);
 function hideAll(){["home","places","quiz","done","admin"].forEach(id=>$(id).classList.add("hidden"))}
 function backHome(){hideAll();$("home").classList.remove("hidden")}
 function showPlaces(){hideAll();$("places").classList.remove("hidden")}
 function toggleAdmin(){hideAll();$("admin").classList.remove("hidden")}
 function closeAdmin(){hideAll();$("home").classList.remove("hidden");$("adminMsg").textContent="";$("adminResults").innerHTML=""}
-function startQuiz(){playerName=$("player").value.trim()||playerName;if(!playerName){$("player").focus();alert("Escribí un nombre o apodo para empezar.");return}round=[...bank].sort(()=>Math.random()-.5).slice(0,3);idx=0;score=0;answers=[];hideAll();$("quiz").classList.remove("hidden");renderQuestion()}
-function renderQuestion(){current=round[idx];$("qnumber").textContent="Pregunta "+(idx+1)+" de 3";$("scorepill").textContent="⭐ "+score+" puntos";$("bar").style.width=(idx/3*100)+"%";$("question").textContent=current.q;$("feedback").textContent="";$("next").disabled=true;$("next").textContent=idx===2?"Ver resultado 🏁":"Siguiente →";let opts=[current.a,...current.wrong.slice(0,3)].sort(()=>Math.random()-.5);$("options").innerHTML="";opts.forEach(opt=>{let b=document.createElement("button");b.className="option";b.textContent=opt;b.onclick=()=>choose(opt,b);$("options").appendChild(b)})}
+function startQuiz(){playerName=$("player").value.trim()||playerName;if(!playerName){$("player").focus();alert("Escribí un nombre o apodo para empezar.");return}round=chooseNextRound();idx=0;score=0;answers=[];hideAll();$("quiz").classList.remove("hidden");renderQuestion()}
+function renderQuestion(){current=round[idx];$("qnumber").textContent="Pregunta "+(idx+1)+" de 3";$("scorepill").textContent="⭐ "+score+" puntos";$("bar").style.width=(idx/3*100)+"%";$("question").textContent=current.q;$("feedback").textContent="";$("next").disabled=true;$("next").textContent=idx===2?"Ver resultado 🏁":"Siguiente →";const distractors=shuffle(topics.filter(t=>t.n!==current.a)).slice(0,3).map(t=>t.n);const opts=shuffle([current.a,...distractors]);$("options").innerHTML="";opts.forEach(opt=>{let b=document.createElement("button");b.className="option";b.textContent=opt;b.onclick=()=>choose(opt,b);$("options").appendChild(b)})}
 function choose(opt,btn){if(answers[idx])return;const ok=opt===current.a;answers[idx]={q:current.q,chosen:opt,correct:current.a,ok};if(ok)score++;[...$("options").children].forEach(b=>{b.disabled=true;if(b.textContent===current.a)b.style.borderColor="#10b981";if(b===btn&&!ok)b.style.borderColor="#fb7185"});$("feedback").textContent=ok?"¡Correcto! 🎉":"Casi. La respuesta correcta es: "+current.a; $("feedback").className=ok?"correct":"wrong";$("scorepill").textContent="⭐ "+score+" puntos";$("next").disabled=false}
 function nextQuestion(){if(!answers[idx])return;idx++;if(idx<3)renderQuestion();else finish()}
 async function finish(){hideAll();$("done").classList.remove("hidden");$("bar").style.width="100%";$("greeting").textContent="¡Bien, "+playerName+"!";$("finalscore").textContent=score+"/3";$("finalmessage").textContent=score===3?"¡Perfecto! Sos un/a explorador/a de primera.":score===2?"¡Muy bien! Cada ronda te enseña algo nuevo.":"¡Gracias por jugar! Probá otra ronda y seguí descubriendo."; $("review").innerHTML="";answers.forEach((a,i)=>{let d=document.createElement("div");d.className="result";d.innerHTML="<b>"+(i+1)+". "+esc(a.q)+"</b><p class='"+(a.ok?"correct":"wrong")+"'>Tu respuesta: "+esc(a.chosen)+"</p>"+(!a.ok?"<p>Correcta: <b>"+esc(a.correct)+"</b></p>":"");$("review").appendChild(d)});if(sb){const {error}=await sb.from("quiz_attempts").insert({player_name:playerName,score:score,total:3,answers:answers});if(error)console.warn("No se pudo guardar el resultado",error)}else{let old=JSON.parse(localStorage.getItem("vh_local_results")||"[]");old.push({player_name:playerName,score,total:3,answers,created_at:new Date().toISOString()});localStorage.setItem("vh_local_results",JSON.stringify(old))}}
